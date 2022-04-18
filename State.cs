@@ -51,17 +51,24 @@ public class State
         new int[]{6, 7}, new int[]{7, 8}, new int[]{8, 12}, new int[]{12, 17}, new int[]{17, 16}, new int[]{16, 15}, new int[]{15, 11}, new int[]{11, 6}
     };
 
-    public int WhiteStonesToPlace { get; set; } = 9;
-    public int BlackStonesToPlace { get; set; } = 9;
+    public int WhitePiecesToPlace { get; set; } = 9;
+    public int BlackPiecesToPlace { get; set; } = 9;
 
     public Phase Phase { 
-        get => (WhiteStonesToPlace > 0 || BlackStonesToPlace > 0) ? Phase.Place : Phase.Play; }
+        get => (WhitePiecesToPlace > 0 || BlackPiecesToPlace > 0) ? Phase.Place : Phase.Play; }
 
     public bool WhiteToMove { get; set; } = true;
     public bool BlackToMove
     {
         get => !WhiteToMove;
         set => WhiteToMove = !value;
+    }
+
+    public Color PlayerToMove { 
+        get => WhiteToMove ? Color.White : Color.Black;
+    }
+    public Color EnemyColor {
+        get => WhiteToMove ? Color.Black : Color.White;
     }
 
     public int WhitePiecesOnBoard()
@@ -79,9 +86,9 @@ public class State
     /// <returns>None if no winner has been found yet</returns>
     public Color DetermineWinner()
     {
-        if (Pieces.Count(x => x == Color.White) < 3)
+        if (Pieces.Count(x => x == Color.White) + WhitePiecesToPlace < 3)
             return Color.Black;
-        else if (Pieces.Count(x => x == Color.Black) < 3)
+        else if (Pieces.Count(x => x == Color.Black) + BlackPiecesToPlace < 3)
             return Color.White;
 
         return Color.None;
@@ -120,6 +127,9 @@ public class State
     {
         State x = new();
         x.Pieces = Pieces.ToArray();
+        x.BlackPiecesToPlace = BlackPiecesToPlace;
+        x.WhitePiecesToPlace = WhitePiecesToPlace;
+        x.WhiteToMove = WhiteToMove;
         return x;
     }
 
@@ -133,15 +143,14 @@ public class State
         x.Select(x => Pieces[x]).Distinct().ToArray().Length == 1);
     }
 
-    public bool MovePossible(int connectionIndex)
+    public bool MovePossible(int start, int end)
     {
-        int field1 = CONNECTIONS[connectionIndex][0];
-        int field2 = CONNECTIONS[connectionIndex][1];
+        if (!CONNECTIONS.Any(x => x.Contains(start) && x.Contains(end)))
+            return false;
 
-        if (Pieces[field1] != Color.None)
-            return Pieces[field2] == Color.None;
-        else
-            return Pieces[field2] != Color.None;
+        if (Pieces[start] != Color.None)
+            return Pieces[end] == Color.None;
+        return false;
     }
 
     public bool PlacePossible(int position) => Pieces[position] == Color.None;
@@ -157,15 +166,11 @@ public class State
         Console.WriteLine("Which piece do you want to take?");
         int x = Convert.ToInt32(Console.ReadLine());
 
-        int[] enemyPieces = Pieces.Select((col, i) => {
-            if (col == (WhiteToMove ? Color.Black : Color.White))
-                return i;
-            return -1;
-        }).Where(x => x != -1).ToArray();
-
-        if (enemyPieces.Contains(x))
+        if (Pieces[x] == EnemyColor && !CheckMill(x))
             Pieces[x] = Color.None;
 
+        else
+            Console.WriteLine("tried taking from mill");
         
     }
 
@@ -175,6 +180,21 @@ public class State
         if (CheckMill(pos))
             TakeEnemyPiece();
     }
+    public void ExecuteJump(int start, int end) {
+        Pieces[end] = Pieces[start];
+        Pieces[start] = Color.None;
+
+        if (CheckMill(end))
+            TakeEnemyPiece();
+    }
+    public void ExecuteMove(int start, int end) {
+        Pieces[end] = Pieces[start];
+        Pieces[start] = Color.None;
+
+        if (CheckMill(end))
+            TakeEnemyPiece();
+    }
+    
 
     public void ExecuteAction() {
         if (Phase == Phase.Place) {
@@ -186,12 +206,22 @@ public class State
             }
 
             if (WhiteToMove)
-                WhiteStonesToPlace--;
+                WhitePiecesToPlace--;
             else
-                BlackStonesToPlace--;
+                BlackPiecesToPlace--;
         }
         else {
+            Console.WriteLine("Select the piece you want to move.");
+            int start = Convert.ToInt32(Console.ReadLine());
+            Console.WriteLine("Where do you want to move your piece?");
+            int end = Convert.ToInt32(Console.ReadLine());
 
+            if ((WhiteToMove && WhitePiecesOnBoard() < 4 
+              || BlackToMove && BlackPiecesOnBoard() < 4) && JumpPossible(start, end))
+                ExecuteJump(start, end);
+            else if (MovePossible(start, end)) {
+                ExecuteMove(start, end);
+            }
         }
 
         WhiteToMove = !WhiteToMove;
@@ -203,7 +233,7 @@ public class State
 
         if (Phase == Phase.Place)
         {
-            res += $"White to place: {WhiteStonesToPlace}, black to place: {BlackStonesToPlace}\n";
+            res += $"White to place: {WhitePiecesToPlace}, black to place: {BlackPiecesToPlace}\n";
         }
         if (Phase == Phase.Play)
         {

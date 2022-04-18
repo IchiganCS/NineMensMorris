@@ -7,11 +7,12 @@ public class Game
 
         State current = new();
         Console.WriteLine(current.ToString());
-        for (int i = 0; i < 18; i++)
+        while (current.DetermineWinner() == Color.None)
         {
             current.ExecuteAction();
             Console.WriteLine(current.ToString());
         }
+        Console.WriteLine($"The winner is {current.DetermineWinner()}");
 
     }
 }
