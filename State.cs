@@ -129,7 +129,8 @@ public sealed class State
 
     public State Clone()
     {
-        return new() {
+        return new()
+        {
             Pieces = Pieces.ToArray(),
             BlackPiecesToPlace = BlackPiecesToPlace,
             WhitePiecesToPlace = WhitePiecesToPlace,
@@ -210,16 +211,51 @@ public sealed class State
             foreach (int x in EmptyPositions())
             {
                 State newState = Clone();
-                newState.PlacePiece(x, CurrentColor);
+                newState.SetPiece(x, CurrentColor);
+                if (CurrentColor == Color.White)
+                    newState.WhitePiecesToPlace--;
+                else
+                    newState.BlackPiecesToPlace--;
+
                 if (newState.CheckMill(x))
                     states.AddRange(newState.GenerateTakeStates());
                 else
                     states.Add(newState);
-                
+
+            }
+        }
+        else if (Phase == Phase.Play)
+        {
+            foreach (int pos in PiecePostions(CurrentColor))
+            {
+                IEnumerable<int> possibles = FindPossibleMoves(pos);
+                State newState = Clone();
+                newState.RemovePiece(pos);
+                foreach (int newPos in possibles)
+                {
+                    State newerState = newState.Clone();
+                    newerState.SetPiece(newPos, CurrentColor);
+
+                    if (newerState.CheckMill(newPos))
+                        states.AddRange(newerState.GenerateTakeStates());
+                    else
+                        states.Add(newerState);
+                }
             }
         }
 
-        return states;
+        return states.Select(x =>
+        {
+            x.WhiteToMove = !x.WhiteToMove;
+            return x;
+        }).ToList();
+    }
+
+    public IEnumerable<int> FindPossibleMoves(int pos)
+    {
+        return CONNECTIONS.Where(x => x.Contains(pos))
+            .Select(x => x.Where(y => y != pos).ToArray()[0])
+            .Where(x => Pieces[x] == Color.None);
     }
 
     public void TakeEnemyPiece()
@@ -239,6 +275,10 @@ public sealed class State
     public void RemovePiece(int pos)
     {
         Pieces[pos] = Color.None;
+    }
+    public void SetPiece(int pos, Color col)
+    {
+        Pieces[pos] = col;
     }
     public void TakePiece(int pos)
     {
@@ -296,7 +336,7 @@ public sealed class State
 
     public override string ToString()
     {
-        string res = "";
+        string res = $"{CurrentColor} to move\n";
 
         if (Phase == Phase.Place)
         {
