@@ -1,16 +1,6 @@
 using System.Linq;
 using System.Collections.Generic;
 
-public enum Color
-{
-    None, White, Black
-}
-
-public enum Phase
-{
-    Place, Play
-}
-
 public sealed class State
 {
     /// <summary>
@@ -115,6 +105,15 @@ public sealed class State
         return Enumerable.Range(0, Pieces.Length).Where(x => Pieces[x] == Color.None);
     }
 
+    private void RemovePiece(int pos)
+    {
+        Pieces[pos] = Color.None;
+    }
+    private void SetPiece(int pos, Color col)
+    {
+        Pieces[pos] = col;
+    }
+
     /// <returns>None if no winner has been found yet</returns>
     public Color DetermineWinner()
     {
@@ -173,23 +172,6 @@ public sealed class State
             x.Select(x => Pieces[x]).Distinct().Count() == 1);
     }
 
-    private bool MovePossible(int start, int end)
-    {
-        if (start == end)
-            return false;
-
-        if (!CONNECTIONS.Any(x => x.Contains(start) && x.Contains(end)))
-            return false;
-
-        if (Pieces[start] != Color.None)
-            return Pieces[end] == Color.None;
-        return false;
-    }
-
-    private bool PlacePossible(int position) => Pieces[position] == Color.None;
-    private bool JumpPossible(int start, int end) => Pieces[end] == Color.None;
-
-
     private List<State> GenerateTakeStates()
     {
         List<State> states = new();
@@ -205,7 +187,6 @@ public sealed class State
 
         return states;
     }
-
 
     public List<State> GenerateNextStates()
     {
@@ -260,15 +241,6 @@ public sealed class State
         return CONNECTIONS.Where(x => x.Contains(pos))
             .Select(x => x.Where(y => y != pos).ToArray()[0])
             .Where(x => Pieces[x] == Color.None);
-    }
-
-    private void RemovePiece(int pos)
-    {
-        Pieces[pos] = Color.None;
-    }
-    private void SetPiece(int pos, Color col)
-    {
-        Pieces[pos] = col;
     }
 
     public override string ToString()
