@@ -11,7 +11,7 @@ public enum Phase
     Place, Play
 }
 
-public class State
+public sealed class State
 {
     /// <summary>
     /// from Left to Right, Top to Bottom
@@ -54,12 +54,15 @@ public class State
     public int WhitePiecesToPlace { get; set; } = 9;
     public int BlackPiecesToPlace { get; set; } = 9;
 
-    public int PiecesToPlace(Color color) {
+    public int PiecesToPlace(Color color)
+    {
         return color == Color.White ? WhitePiecesToPlace : BlackPiecesToPlace;
     }
 
-    public Phase Phase { 
-        get => (WhitePiecesToPlace > 0 || BlackPiecesToPlace > 0) ? Phase.Place : Phase.Play; }
+    public Phase Phase
+    {
+        get => (WhitePiecesToPlace > 0 || BlackPiecesToPlace > 0) ? Phase.Place : Phase.Play;
+    }
 
     public bool WhiteToMove { get; set; } = true;
     public bool BlackToMove
@@ -68,39 +71,56 @@ public class State
         set => WhiteToMove = !value;
     }
 
-    public bool WhiteCanJump {
-        get => Pieces.Count(x => x == Color.White) + WhitePiecesToPlace < 4;
-    }
-    public bool BlackCanJump {
-        get => Pieces.Count(x => x == Color.Black) + BlackPiecesToPlace < 4;
-    }
-    public bool CanJump(Color color) {
-        return color == Color.White ? WhiteCanJump : BlackCanJump;
+    public bool WhiteCanJump
+    {
+        get => WhitePiecesCount < 4;
     }
 
-    public Color PlayerToMove { 
+    public bool BlackCanJump
+    {
+        get => BlackPiecesCount < 4;
+    }
+    public bool CanJump(Color color)
+    {
+        return color == Color.White ? WhiteCanJump : BlackCanJump;
+    }
+    public int WhitePiecesCount
+    {
+        get => Pieces.Count(x => x == Color.White) + WhitePiecesToPlace;
+    }
+    public int BlackPiecesCount
+    {
+        get => Pieces.Count(x => x == Color.Black) + BlackPiecesToPlace;
+    }
+    public Color CurrentColor
+    {
         get => WhiteToMove ? Color.White : Color.Black;
     }
-    public Color EnemyColor {
+    public Color EnemyColor
+    {
         get => WhiteToMove ? Color.Black : Color.White;
     }
 
-    public int PieceCount(Color color)
+    public int PiecesCount(Color color)
     {
-        return Pieces.Count(x => x == color) + 
-            PiecesToPlace(color);
+        return color == Color.White ? WhitePiecesCount : BlackPiecesCount;
     }
 
-    public IEnumerable<int> PiecePostions(Color color) {
+    public IEnumerable<int> PiecePostions(Color color)
+    {
         return Enumerable.Range(0, Pieces.Length).Where(x => Pieces[x] == color);
+    }
+    public IEnumerable<int> EmptyPositions()
+    {
+        return Enumerable.Range(0, Pieces.Length).Where(x => Pieces[x] == Color.None);
     }
 
     /// <returns>None if no winner has been found yet</returns>
     public Color DetermineWinner()
     {
-        if (PieceCount(Color.White) < 3)
+        if (PiecesCount(Color.White) < 3)
             return Color.Black;
-        else if (PieceCount(Color.Black) < 3)
+        else if (PiecesCount(Color.Black) < 3)
             return Color.White;
 
         return Color.None;
@@ -109,24 +129,26 @@ public class State
 
     public State Clone()
     {
-        State x = new();
-        x.Pieces = Pieces.ToArray();
-        x.BlackPiecesToPlace = BlackPiecesToPlace;
-        x.WhitePiecesToPlace = WhitePiecesToPlace;
-        x.WhiteToMove = WhiteToMove;
-        return x;
+        return new() {
+            Pieces = Pieces.ToArray(),
+            BlackPiecesToPlace = BlackPiecesToPlace,
+            WhitePiecesToPlace = WhitePiecesToPlace,
+            WhiteToMove = WhiteToMove
+        };
     }
 
-    public override bool Equals(object obj) {
-        if (obj is null || !(obj is State))
+    public override bool Equals(object obj)
+    {
+        if (obj is null || obj is not State)
             return false;
         else
             return Equals(obj as State);
     }
-    public bool Equals(State state) {
+    public bool Equals(State state)
+    {
         if (state is null)
             return false;
-        return state.WhiteToMove == WhiteToMove && 
+        return state.WhiteToMove == WhiteToMove &&
             state.BlackPiecesToPlace == BlackPiecesToPlace &&
             state.WhitePiecesToPlace == WhitePiecesToPlace &&
             state.Pieces.Equals(Pieces);
@@ -138,6 +160,9 @@ public class State
     /// <param name="piecePosition"></param>
     public bool CheckMill(int piecePosition)
     {
+        if (Pieces[piecePosition] == Color.None)
+            return false;
+
         return MILLS.Any(x => x.Contains(piecePosition) &&
             //just one color
             x.Select(x => Pieces[x]).Distinct().Count() == 1);
@@ -145,6 +170,9 @@ public class State
 
     public bool MovePossible(int start, int end)
     {
+        if (start == end)
+            return false;
+
         if (!CONNECTIONS.Any(x => x.Contains(start) && x.Contains(end)))
             return false;
 
@@ -157,12 +185,45 @@ public class State
     public bool JumpPossible(int start, int end) => Pieces[end] == Color.None;
 
 
-    public State[] GenerateNextStates()
+    public List<State> GenerateTakeStates()
     {
-        return null; 
+        List<State> states = new();
+        foreach (int x in PiecePostions(EnemyColor))
+        {
+            if (CheckMill(x))
+                continue;
+
+            State newState = Clone();
+            newState.RemovePiece(x);
+            states.Add(newState);
+        }
+
+        return states;
     }
 
-    public void TakeEnemyPiece() {
+
+    public List<State> GenerateNextStates()
+    {
+        List<State> states = new();
+        if (Phase == Phase.Place)
+        {
+            foreach (int x in EmptyPositions())
+            {
+                State newState = Clone();
+                newState.PlacePiece(x, CurrentColor);
+                if (newState.CheckMill(x))
+                    states.AddRange(newState.GenerateTakeStates());
+                else
+                    states.Add(newState);
+                
+            }
+        }
+
+        return states;
+    }
+
+    public void TakeEnemyPiece()
+    {
         Console.WriteLine("Which piece do you want to take?");
         int x = Convert.ToInt32(Console.ReadLine());
 
@@ -171,27 +232,38 @@ public class State
 
         else
             Console.WriteLine("tried taking from mill");
-        
+
     }
 
-    
-    public void RemovePiece(int pos) {
+
+    public void RemovePiece(int pos)
+    {
         Pieces[pos] = Color.None;
     }
-    public void PlacePiece(int pos, Color col) {
+    public void TakePiece(int pos)
+    {
+        if (CheckMill(pos))
+            Console.WriteLine("tried taking from mill!");
+        RemovePiece(pos);
+    }
+    public void PlacePiece(int pos, Color col)
+    {
         Pieces[pos] = col;
 
         if (CheckMill(pos))
             TakeEnemyPiece();
     }
 
-    public void ExecuteAction() {
-        if (Phase == Phase.Place) {
+    public void ExecuteAction()
+    {
+        if (Phase == Phase.Place)
+        {
             Console.WriteLine("Where do you want to put your piece?");
             int pos = Convert.ToInt32(Console.ReadLine());
 
-            if (PlacePossible(pos)) {
-                PlacePiece(pos);
+            if (PlacePossible(pos))
+            {
+                PlacePiece(pos, CurrentColor);
             }
 
             if (WhiteToMove)
@@ -199,17 +271,23 @@ public class State
             else
                 BlackPiecesToPlace--;
         }
-        else {
+        else
+        {
             Console.WriteLine("Select the piece you want to move.");
             int start = Convert.ToInt32(Console.ReadLine());
             Console.WriteLine("Where do you want to move your piece?");
             int end = Convert.ToInt32(Console.ReadLine());
 
-            if ((WhiteToMove && WhitePiecesCount() < 4 
-              || BlackToMove && BlackPiecesCount() < 4) && JumpPossible(start, end))
-                ExecuteJump(start, end);
-            else if (MovePossible(start, end)) {
-                ExecuteMove(start, end);
+            if ((WhiteToMove && WhiteCanJump
+              || BlackToMove && BlackCanJump) && JumpPossible(start, end))
+            {
+                RemovePiece(start);
+                PlacePiece(end, CurrentColor);
+            }
+            else if (MovePossible(start, end))
+            {
+                RemovePiece(start);
+                PlacePiece(end, CurrentColor);
             }
         }
 
@@ -226,9 +304,9 @@ public class State
         }
         if (Phase == Phase.Play)
         {
-            if (WhitePiecesCount() < 4)
+            if (WhiteCanJump)
                 res += "White can jump\n";
-            if (BlackPiecesCount() < 4)
+            if (BlackCanJump)
                 res += "Black can jump\n";
         }
 
