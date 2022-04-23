@@ -5,16 +5,17 @@ public class Game
 {
     public static void Main(string[] args)
     {
-
         State current = new();
-        Console.WriteLine(current.ToString());
-        List<State> lower = current.GenerateNextStates();
-        for (int i = 0; i < 4; i++) {
+        List<State> lower = new();
+        lower.Add(current);
+        for (int i = 0; i < 5; i++) {
             List<State> newLs = new();
             lower.ForEach(x => newLs.AddRange(x.GenerateNextStates()));
             lower = newLs;
+            Console.WriteLine($"Iteration {i}: {lower.Count} possibilities");
         }
-        lower.ForEach(Console.WriteLine);
+        Console.WriteLine(lower.Where(x => x.BlackPiecesCount == 8).Count());
+        Console.WriteLine(State.MILLS.Length);
         Console.WriteLine($"The winner is {current.DetermineWinner()}");
     }
 }

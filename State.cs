@@ -25,7 +25,7 @@ public sealed class State
     /// </summary>
     /// <value></value>
     public Color[] Pieces { get; set; } = new Color[24];
-    private static int[][] MILLS = new int[][]{
+    public static readonly int[][] MILLS = new int[][]{
         new int[]{0, 1, 2},
         new int[]{0, 9, 21},
         new int[]{2, 14, 23},
@@ -43,7 +43,7 @@ public sealed class State
         new int[]{15, 16, 17},
         new int[]{8, 12, 17}
     };
-    private static int[][] CONNECTIONS = new int[][]{
+    public static readonly int[][] CONNECTIONS = new int[][]{
         new int[]{0, 1}, new int[]{1, 2}, new int[]{2, 14}, new int[]{14, 23}, new int[]{23, 22}, new int[]{22, 21}, new int[]{21, 9}, new int[]{9, 0},
         new int[]{1, 4}, new int[]{9, 10}, new int[]{13, 14}, new int[]{19, 22},
         new int[]{3, 4}, new int[]{4, 5}, new int[]{5, 13}, new int[]{13, 20}, new int[]{20, 19}, new int[]{19, 18}, new int[]{18, 10}, new int[]{10, 3},
@@ -106,11 +106,11 @@ public sealed class State
         return color == Color.White ? WhitePiecesCount : BlackPiecesCount;
     }
 
-    public IEnumerable<int> PiecePostions(Color color)
+    private IEnumerable<int> PiecePostions(Color color)
     {
         return Enumerable.Range(0, Pieces.Length).Where(x => Pieces[x] == color);
     }
-    public IEnumerable<int> EmptyPositions()
+    private IEnumerable<int> EmptyPositions()
     {
         return Enumerable.Range(0, Pieces.Length).Where(x => Pieces[x] == Color.None);
     }
@@ -138,12 +138,12 @@ public sealed class State
         };
     }
 
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
-        if (obj is null || obj is not State)
-            return false;
+        if (obj is State st)
+            return Equals(st);
         else
-            return Equals(obj as State);
+            return false;
     }
     public bool Equals(State state)
     {
@@ -154,12 +154,16 @@ public sealed class State
             state.WhitePiecesToPlace == WhitePiecesToPlace &&
             state.Pieces.Equals(Pieces);
     }
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
+    }
 
     /// <summary>
     /// Checks whether piecePosition lies in a mill
     /// </summary>
     /// <param name="piecePosition"></param>
-    public bool CheckMill(int piecePosition)
+    private bool CheckMill(int piecePosition)
     {
         if (Pieces[piecePosition] == Color.None)
             return false;
@@ -169,7 +173,7 @@ public sealed class State
             x.Select(x => Pieces[x]).Distinct().Count() == 1);
     }
 
-    public bool MovePossible(int start, int end)
+    private bool MovePossible(int start, int end)
     {
         if (start == end)
             return false;
@@ -182,11 +186,11 @@ public sealed class State
         return false;
     }
 
-    public bool PlacePossible(int position) => Pieces[position] == Color.None;
-    public bool JumpPossible(int start, int end) => Pieces[end] == Color.None;
+    private bool PlacePossible(int position) => Pieces[position] == Color.None;
+    private bool JumpPossible(int start, int end) => Pieces[end] == Color.None;
 
 
-    public List<State> GenerateTakeStates()
+    private List<State> GenerateTakeStates()
     {
         List<State> states = new();
         foreach (int x in PiecePostions(EnemyColor))
@@ -251,87 +255,20 @@ public sealed class State
         }).ToList();
     }
 
-    public IEnumerable<int> FindPossibleMoves(int pos)
+    private IEnumerable<int> FindPossibleMoves(int pos)
     {
         return CONNECTIONS.Where(x => x.Contains(pos))
             .Select(x => x.Where(y => y != pos).ToArray()[0])
             .Where(x => Pieces[x] == Color.None);
     }
 
-    public void TakeEnemyPiece()
-    {
-        Console.WriteLine("Which piece do you want to take?");
-        int x = Convert.ToInt32(Console.ReadLine());
-
-        if (Pieces[x] == EnemyColor && !CheckMill(x))
-            RemovePiece(x);
-
-        else
-            Console.WriteLine("tried taking from mill");
-
-    }
-
-
-    public void RemovePiece(int pos)
+    private void RemovePiece(int pos)
     {
         Pieces[pos] = Color.None;
     }
-    public void SetPiece(int pos, Color col)
+    private void SetPiece(int pos, Color col)
     {
         Pieces[pos] = col;
-    }
-    public void TakePiece(int pos)
-    {
-        if (CheckMill(pos))
-            Console.WriteLine("tried taking from mill!");
-        RemovePiece(pos);
-    }
-    public void PlacePiece(int pos, Color col)
-    {
-        Pieces[pos] = col;
-
-        if (CheckMill(pos))
-            TakeEnemyPiece();
-    }
-
-    public void ExecuteAction()
-    {
-        if (Phase == Phase.Place)
-        {
-            Console.WriteLine("Where do you want to put your piece?");
-            int pos = Convert.ToInt32(Console.ReadLine());
-
-            if (PlacePossible(pos))
-            {
-                PlacePiece(pos, CurrentColor);
-            }
-
-            if (WhiteToMove)
-                WhitePiecesToPlace--;
-            else
-                BlackPiecesToPlace--;
-        }
-        else
-        {
-            Console.WriteLine("Select the piece you want to move.");
-            int start = Convert.ToInt32(Console.ReadLine());
-            Console.WriteLine("Where do you want to move your piece?");
-            int end = Convert.ToInt32(Console.ReadLine());
-
-            if ((WhiteToMove && WhiteCanJump
-              || BlackToMove && BlackCanJump) && JumpPossible(start, end))
-            {
-                RemovePiece(start);
-                PlacePiece(end, CurrentColor);
-            }
-            else if (MovePossible(start, end))
-            {
-                RemovePiece(start);
-                PlacePiece(end, CurrentColor);
-            }
-        }
-
-        WhiteToMove = !WhiteToMove;
     }
 
     public override string ToString()
