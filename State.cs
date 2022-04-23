@@ -1,7 +1,8 @@
 using System.Linq;
 using System.Collections.Generic;
+using System;
 
-public sealed class State
+public sealed class State : IEquatable<State>
 {
     /// <summary>
     /// from Left to Right, Top to Bottom
@@ -138,24 +139,19 @@ public sealed class State
     }
 
     public override bool Equals(object? obj)
-    {
-        if (obj is State st)
-            return Equals(st);
-        else
-            return false;
-    }
-    public bool Equals(State state)
+        => Equals(obj as State);
+    public bool Equals(State? state)
     {
         if (state is null)
             return false;
         return state.WhiteToMove == WhiteToMove &&
             state.BlackPiecesToPlace == BlackPiecesToPlace &&
             state.WhitePiecesToPlace == WhitePiecesToPlace &&
-            state.Pieces.Equals(Pieces);
+            Enumerable.Range(0, Pieces.Length).All(x => state.Pieces[x] == Pieces[x]);
     }
     public override int GetHashCode()
     {
-        return base.GetHashCode();
+        return Pieces.GetHashCode() << 7 + ((WhitePiecesCount + 10) * BlackPiecesCount) << (WhiteToMove ? 0 : 5);
     }
 
     /// <summary>
@@ -213,10 +209,9 @@ public sealed class State
         {
             foreach (int pos in PiecePostions(CurrentColor))
             {
-                IEnumerable<int> possibles = FindPossibleMoves(pos);
                 State newState = Clone();
                 newState.RemovePiece(pos);
-                foreach (int newPos in possibles)
+                foreach (int newPos in FindPossibleMoves(pos))
                 {
                     State newerState = newState.Clone();
                     newerState.SetPiece(newPos, CurrentColor);
@@ -229,6 +224,7 @@ public sealed class State
             }
         }
 
+        //Todo: find working (and logical) way to achieve this
         return states.Select(x =>
         {
             x.WhiteToMove = !x.WhiteToMove;
@@ -241,6 +237,11 @@ public sealed class State
         return CONNECTIONS.Where(x => x.Contains(pos))
             .Select(x => x.Where(y => y != pos).ToArray()[0])
             .Where(x => Pieces[x] == Color.None);
+    }
+
+    public float Evaluate()
+    {
+        return WhitePiecesCount - BlackPiecesCount;
     }
 
     public override string ToString()
