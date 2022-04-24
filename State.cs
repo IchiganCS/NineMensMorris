@@ -151,14 +151,15 @@ public sealed class State : IEquatable<State>
     }
     public override int GetHashCode()
     {
-        return Pieces.GetHashCode() << 7 + ((WhitePiecesCount + 10) * BlackPiecesCount) << (WhiteToMove ? 0 : 5);
+        return Pieces.Sum(x => x == Color.None ? 1 : (x == Color.White ? 256 : 256 * 256)) << 7 + ((WhitePiecesCount + 10) * BlackPiecesCount) << (WhiteToMove ? 0 : 5);
     }
+
 
     /// <summary>
     /// Checks whether piecePosition lies in a mill
     /// </summary>
     /// <param name="piecePosition"></param>
-    private bool CheckMill(int piecePosition)
+    public bool CheckMill(int piecePosition)
     {
         if (Pieces[piecePosition] == Color.None)
             return false;
@@ -239,7 +240,7 @@ public sealed class State : IEquatable<State>
             .Where(x => Pieces[x] == Color.None);
     }
 
-    public float Evaluate()
+    public float SingleEvaluate()
     {
         return WhitePiecesCount - BlackPiecesCount;
     }

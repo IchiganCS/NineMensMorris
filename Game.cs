@@ -6,18 +6,60 @@ public class Game
     public static void Main(string[] args)
     {
         State current = new();
-        List<State> lower = new();
-        lower.Add(current);
-        for (int i = 0; i < 3; i++) {
-            List<State> newLs = new();
-            lower.ForEach(x => newLs.AddRange(x.GenerateNextStates()));
-            lower = newLs.Distinct().ToList();
-            Console.WriteLine($"Iteration {i}: {lower.Count} possibilities");
+        while (current.DetermineWinner() == Color.None)
+        {
+            Console.WriteLine(current);
+            //player
+            while (current.WhiteToMove)
+            {
+                State copy = current.Clone();
+                List<State> valids = current.GenerateNextStates();
+                try
+                {
+                    int start = 0, end = 0;
+                    if (current.Phase == Phase.Place)
+                    {
+                        Console.Write("Place piece at: ");
+                        end = Convert.ToInt32(Console.ReadLine());
+                        copy.Pieces[end] = Color.White;
+                        copy.WhiteToMove = false;
+                        copy.WhitePiecesToPlace--;
+                    }
+                    else if (current.Phase == Phase.Play) 
+                    {
+                        Console.Write("Move piece from: ");
+                        start = Convert.ToInt32(Console.ReadLine());
+                        Console.Write("Set piece to: ");
+                        end = Convert.ToInt32(Console.ReadLine());
+
+                        copy.Pieces[start] = Color.None;
+                        copy.Pieces[end] = Color.White;
+                        copy.WhiteToMove = false;
+                    }
+                    if (current.CheckMill(end)) {
+                        Console.Write("Take piece from: ");
+                        int pos = Convert.ToInt32(Console.ReadLine());
+                        copy.Pieces[pos] = Color.None;
+                    }
+                    if (!valids.Contains(copy))
+                    {
+                        copy = current.Clone();
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("ERROR!");
+                    Console.WriteLine(e.StackTrace);
+                }
+                current = copy;
+            }
+            if (current.BlackToMove)
+            {
+                //bot                
+                current = new StateTree(current, 10).BuildAndEvaluate();
+            }
         }
-        Console.WriteLine(lower.Where(x => x.BlackPiecesCount == 8).Count());
-        Console.WriteLine(lower.Count(x => x.Evaluate() > 0));
-        Console.WriteLine(lower.Count(x => x.Evaluate() < 0));
-        lower.Where(x => x.Pieces[0] == Color.White && x.Pieces[1] == Color.Black).Distinct().ToList().ForEach(Console.WriteLine);
+        Console.WriteLine(current);
         Console.WriteLine($"The winner is {current.DetermineWinner()}");
     }
 }
