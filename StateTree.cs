@@ -1,3 +1,5 @@
+
+
 public class StateTree {
     private State Start { get; init; }
 
@@ -9,9 +11,10 @@ public class StateTree {
     }
 
     public State BuildAndEvaluate() {
-        if (Depth == -1) {
+        if (Depth == 0)
+            return Start;
+        if (Depth == 1)
             return Start.GenerateNextStates().MaxBy(x => Start.WhiteToMove ? x.SingleEvaluate() : -x.SingleEvaluate())!;
-        }
         else
             return Start.GenerateNextStates().MaxBy(x => Start.WhiteToMove ? new StateTree(x, Depth - 1).BuildAndEvaluate().SingleEvaluate() : 
                 -new StateTree(x, Depth - 1).BuildAndEvaluate().SingleEvaluate())!;

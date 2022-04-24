@@ -12,7 +12,7 @@ public class Game
             //bot       
             if (current.BlackToMove)
             {         
-                current = new StateTree(current, 3).BuildAndEvaluate();
+                current = new StateTree(current, 5).BuildAndEvaluate();
                 continue;
             }
             //player
@@ -42,7 +42,7 @@ public class Game
                         copy.Pieces[end] = Color.White;
                         copy.WhiteToMove = false;
                     }
-                    if (current.CheckMill(end)) {
+                    if (copy.CheckMill(end)) {
                         Console.Write("Take piece from: ");
                         int pos = Convert.ToInt32(Console.ReadLine());
                         copy.Pieces[pos] = Color.None;
