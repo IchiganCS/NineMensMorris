@@ -9,7 +9,11 @@ public class StateTree {
     }
 
     public State BuildAndEvaluate() {
-        //Todo: very primitive Solution
-        return Start.GenerateNextStates().MaxBy(x => Start.WhiteToMove ? x.SingleEvaluate() : -x.SingleEvaluate())!;
+        if (Depth == -1) {
+            return Start.GenerateNextStates().MaxBy(x => Start.WhiteToMove ? x.SingleEvaluate() : -x.SingleEvaluate())!;
+        }
+        else
+            return Start.GenerateNextStates().MaxBy(x => Start.WhiteToMove ? new StateTree(x, Depth - 1).BuildAndEvaluate().SingleEvaluate() : 
+                -new StateTree(x, Depth - 1).BuildAndEvaluate().SingleEvaluate())!;
     }
 }

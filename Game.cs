@@ -12,7 +12,7 @@ public class Game
             //bot       
             if (current.BlackToMove)
             {         
-                current = new StateTree(current, 10).BuildAndEvaluate();
+                current = new StateTree(current, 3).BuildAndEvaluate();
                 continue;
             }
             //player
