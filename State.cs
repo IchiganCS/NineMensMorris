@@ -235,9 +235,12 @@ public sealed class State : IEquatable<State>
 
     private IEnumerable<int> FindPossibleMoves(int pos)
     {
-        return CONNECTIONS.Where(x => x.Contains(pos))
-            .Select(x => x.Where(y => y != pos).ToArray()[0])
-            .Where(x => Pieces[x] == Color.None);
+        if (!CanJump(CurrentColor))
+            return CONNECTIONS.Where(x => x.Contains(pos))
+                .Select(x => x.Where(y => y != pos).ToArray()[0])
+                .Where(x => Pieces[x] == Color.None);
+        else
+            return EmptyPositions();
     }
 
     public float SingleEvaluate()

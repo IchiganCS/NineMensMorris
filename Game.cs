@@ -9,6 +9,12 @@ public class Game
         while (current.DetermineWinner() == Color.None)
         {
             Console.WriteLine(current);
+            //bot       
+            if (current.BlackToMove)
+            {         
+                current = new StateTree(current, 10).BuildAndEvaluate();
+                continue;
+            }
             //player
             while (current.WhiteToMove)
             {
@@ -53,11 +59,7 @@ public class Game
                 }
                 current = copy;
             }
-            if (current.BlackToMove)
-            {
-                //bot                
-                current = new StateTree(current, 10).BuildAndEvaluate();
-            }
+            
         }
         Console.WriteLine(current);
         Console.WriteLine($"The winner is {current.DetermineWinner()}");
